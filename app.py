@@ -19,6 +19,7 @@ app.config['MYSQL_PORT'] = int(os.getenv('MYSQLPORT', 3306))
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 app.secret_key = os.getenv('SECRET_KEY', 'fallback-secret')
+mysql = MySQL(app)
 # ── Auth decorator ──────────────────────────────────────────────────────────
 def login_required(f):
     @wraps(f)
