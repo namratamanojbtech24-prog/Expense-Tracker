@@ -9,15 +9,16 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 # MySQL config
-app.config['MYSQL_HOST'] = Config.MYSQL_HOST
-app.config['MYSQL_USER'] = Config.MYSQL_USER
-app.config['MYSQL_PASSWORD'] = Config.MYSQL_PASSWORD
-app.config['MYSQL_DB'] = Config.MYSQL_DB
+import os
+
+app.config['MYSQL_HOST'] = os.getenv('MYSQLHOST')
+app.config['MYSQL_USER'] = os.getenv('MYSQLUSER')
+app.config['MYSQL_PASSWORD'] = os.getenv('MYSQLPASSWORD')
+app.config['MYSQL_DB'] = os.getenv('MYSQLDATABASE')
+app.config['MYSQL_PORT'] = int(os.getenv('MYSQLPORT', 3306))
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
-app.secret_key = Config.SECRET_KEY
 
-mysql = MySQL(app)
-
+app.secret_key = os.getenv('SECRET_KEY', 'fallback-secret')
 # ── Auth decorator ──────────────────────────────────────────────────────────
 def login_required(f):
     @wraps(f)
