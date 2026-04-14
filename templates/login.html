@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — SpendWise</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+<div class="auth-page">
+
+  <!-- Logo -->
+  <div class="auth-logo-wrap">
+    <div class="auth-logo-icon">↘</div>
+    <div class="auth-logo-name">SpendWise</div>
+    <div class="auth-tagline">Track every paisa, save every rupee</div>
+  </div>
+
+  <!-- Card -->
+  <div class="auth-card">
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <a href="{{ url_for('login') }}" class="auth-tab active">Sign In</a>
+      <a href="{{ url_for('register') }}" class="auth-tab">Create Account</a>
+    </div>
+
+    <div class="auth-form-body">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, msg in messages %}
+          <div class="form-{{ 'success' if category == 'success' else 'error' }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      {% if error %}
+        <div class="form-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('login') }}">
+
+        <div class="form-group">
+          <label class="form-label" for="identifier">Email Address</label>
+          <div class="input-icon-wrap">
+            <span class="input-icon">✉</span>
+            <input class="form-control" type="text" id="identifier" name="identifier"
+                   value="{{ identifier }}" placeholder="you@example.com" required autofocus />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-icon-wrap" style="position:relative;">
+            <span class="input-icon">🔒</span>
+            <input class="form-control" type="password" id="password" name="password"
+                   placeholder="Min. 6 characters" required style="padding-right:44px;" />
+            <button type="button" class="pw-toggle" onclick="togglePw('password', this)">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:8px; padding:14px;">
+          Sign In
+        </button>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePw(id, btn) {
+  const input = document.getElementById(id);
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+  else { input.type = 'password'; btn.textContent = '👁'; }
+}
+</script>
+
+</body>
+</html>
