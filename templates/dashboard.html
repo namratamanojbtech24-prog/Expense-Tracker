@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — SpendWise{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ── -->
+<div class="page-header">
+  <div>
+    <div class="page-title">Dashboard</div>
+    <div class="page-subtitle">Manage and track your spending</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+
+  <button class="btn btn-primary" id="add-expense-btn">
+    + Add Expense
+  </button>
+  <button class="btn btn-primary" id="set-budget-btn">
+    Set Budget
+  </button>
+  <a href="{{ url_for('export_csv', category=active_category, date_from=date_from, date_to=date_to) }}" 
+     class="btn btn-primary">
+     ⬇ Export CSV
+  </a>
+
+</div>
+</div>
+
+<!-- ── Stat cards (2x2 grid) ── -->
+<div class="stats-grid">
+
+  <div class="stat-card pink-card">
+    <div class="stat-icon">₹</div>
+    <div class="stat-label">Total Spent</div>
+    <div class="stat-value">₹{{ "%.2f"|format(total|float) }}</div>
+    <div class="stat-sub">{{ count }} expense{% if count != 1 %}s{% endif %}</div>
+  </div>
+
+  <div class="stat-card blue-card">
+    <div class="stat-icon">📅</div>
+    <div class="stat-label">This Month</div>
+    <div class="stat-value">₹{{ "%.2f"|format(month_total|float) }}</div>
+    <div class="stat-sub">{{ month_count }} transaction{% if month_count != 1 %}s{% endif %}</div>
+  </div>
+
+  <div class="stat-card orange-card">
+    <div class="stat-icon">↗</div>
+    <div class="stat-label">Top Category</div>
+    <div class="stat-value" style="font-size:26px; letter-spacing:-0.5px;">
+      {% if top_cat %}{{ top_cat['category'] }}{% else %}—{% endif %}
+    </div>
+    <div class="stat-sub">
+      {% if top_cat %}₹{{ "%.2f"|format(top_cat['cat_total']|float) }}{% endif %}
+    </div>
+  </div>
+
+  <div class="stat-card green-card">
+  <div class="stat-icon">💰</div>
+  <div class="stat-label">Budget</div>
+  
+  <div class="stat-value">₹{{ "%.2f"|format(budget|float) }}</div>
+
+  <div class="stat-sub">
+    {% if remaining >= 0 %}
+      ₹{{ "%.2f"|format(remaining|float) }} left
+    {% else %}
+      Exceeded by ₹{{ "%.2f"|format((-remaining)|float) }}
+    {% endif %}
+  </div>
+</div>
+
+</div>
+
+<!-- ── Search & filter bar ── -->
+<div class="search-bar-wrap">
+  <div class="search-input-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" id="search-input" placeholder="Search expenses..." />
+  </div>
+  <button class="filter-toggle" id="filter-toggle-btn">
+    ⚙ Filters ▾
+  </button>
+</div>
+
+<!-- Category + date filters (collapsible) -->
+<div id="filters-panel" style="display:none; margin-bottom:16px;">
+  <form method="GET" action="{{ url_for('dashboard') }}" id="filter-form">
+    <div class="filter-pills" style="margin-bottom:12px;">
+      <a href="{{ url_for('dashboard') }}"
+         class="filter-pill {% if not active_category %}active{% endif %}">All</a>
+      {% for cat in categories %}
+        <a href="{{ url_for('dashboard', category=cat, date_from=date_from, date_to=date_to) }}"
+           class="filter-pill {% if active_category == cat %}active{% endif %}">{{ cat }}</a>
+      {% endfor %}
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <input type="hidden" name="category" value="{{ active_category }}" />
+      <input type="date" name="date_from" value="{{ date_from }}" class="form-control"
+             style="width:auto; padding:8px 12px; font-size:12px;" onchange="this.form.submit()" />
+      <span style="color:var(--text-3); font-size:12px;">to</span>
+      <input type="date" name="date_to" value="{{ date_to }}" class="form-control"
+             style="width:auto; padding:8px 12px; font-size:12px;" onchange="this.form.submit()" />
+      {% if active_category or date_from or date_to %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- ── Expenses table ── -->
+<div class="table-card">
+  {% if expenses %}
+  <table class="expense-table" id="expense-table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Amount</th>
+        <th>Date</th>
+        <th>Category</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for exp in expenses %}
+      <tr data-id="{{ exp['id'] }}" data-desc="{{ (exp['description'] or '')|lower }}">
+        <td class="desc-cell">{{ exp['description'] or 'No description' }}</td>
+        <td class="amount-cell">₹{{ "%.2f"|format(exp['amount']|float) }}</td>
+        <td class="date-cell">{{ exp['date'].strftime('%b %d, %Y') }}</td>
+        <td><span class="cat-badge cat-{{ exp['category'] }}">{{ exp['category'] }}</span></td>
+        <td>
+          <div class="actions-cell">
+            <button class="btn btn-outline btn-sm edit-btn"
+              data-id="{{ exp['id'] }}"
+              data-amount="{{ exp['amount'] }}"
+              data-date="{{ exp['date'] }}"
+              data-category="{{ exp['category'] }}"
+              data-description="{{ exp['description'] or '' }}">
+              Edit
+            </button>
+            <button class="btn btn-danger btn-sm delete-btn" data-id="{{ exp['id'] }}">
+              Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">💸</div>
+    <p>No expenses yet. Add your first one!</p>
+  </div>
+  {% endif %}
+</div>
+
+
+<!-- ── Add / Edit Modal ── -->
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add Expense</div>
+    <input type="hidden" id="editing-id" />
+
+    <form id="expense-form">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Amount (₹)</label>
+          <input class="form-control" type="number" id="expense-amount"
+                 step="0.01" min="0.01" placeholder="0.00" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="form-control" type="date" id="expense-date" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-control" id="expense-category" required>
+          <option value="" disabled selected>Select a category</option>
+          {% for cat in categories %}
+            <option value="{{ cat }}">{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input class="form-control" type="text" id="expense-description"
+               placeholder="e.g. Swiggy dinner order" maxlength="255" />
+      </div>
+    </form>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('expense-modal')">Cancel</button>
+      <button class="btn btn-primary" id="save-expense-btn">Save Expense</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Confirm Delete Modal ── -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title">Delete Expense?</div>
+    <p style="font-size:13px; color:var(--text-2); line-height:1.7;">
+      This action cannot be undone. The expense will be permanently removed from your records.
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Filter toggle
+document.getElementById('set-budget-btn').addEventListener('click', async () => {
+  const budget = prompt("Enter your monthly budget:");
+
+  if (!budget) return;
+
+  const res = await fetch('/set_budget', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ budget })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    alert("✅ Budget updated!");
+    location.reload();
+  } else {
+    alert("❌ Error setting budget");
+  }
+});
+
+// Budget warning
+const remaining = parseFloat("{{ remaining }}");
+
+if (remaining < 0) {
+  alert("⚠ Budget exceeded!");
+}
+document.getElementById('filter-toggle-btn').addEventListener('click', function() {
+  const panel = document.getElementById('filters-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+
+// Live search
+document.getElementById('search-input').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#expense-table tbody tr').forEach(row => {
+    const desc = row.dataset.desc || '';
+    row.style.display = desc.includes(q) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}
